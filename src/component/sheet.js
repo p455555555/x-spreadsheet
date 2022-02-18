@@ -448,9 +448,21 @@ function editorSet() {
   clearClipboard.call(this);
 }
 
+function scrollEnd(ri) {
+  const { viewHeight, rowsHeight } = this;
+  const screenRowsNum = Math.floor(viewHeight / rowsHeight);
+  const endRi = screenRowsNum + ri - 3;
+
+  if (rowLen ===  endRi) {
+    this.trigger('scroll-end', endRi);
+  }
+}
+
 function verticalScrollbarMove(distance) {
   const { data, table, selector } = this;
-  data.scrolly(distance, () => {
+  // this.trigger('mouse-scoll', data?.scroll);
+  data.scrolly(distance, (ri) => {
+    scrollEnd.call(this, ri);
     selector.resetBRLAreaOffset();
     editorSetOffset.call(this);
     table.render();
@@ -914,6 +926,9 @@ export default class Sheet {
     );
     // table
     this.table = new Table(this.tableEl.el, data);
+    this.viewHeight = data.viewHeight();
+    this.rowsHeight = data.rows.getHeight();
+
     sheetInitEvents.call(this);
     sheetReset.call(this);
     // init selector [0, 0]

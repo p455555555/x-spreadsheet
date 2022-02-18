@@ -910,7 +910,7 @@ export default class DataProxy {
     if (scroll.y !== y1) {
       scroll.ri = y > 0 ? ri : 0;
       scroll.y = y1;
-      cb();
+      cb(ri);
     }
   }
 
