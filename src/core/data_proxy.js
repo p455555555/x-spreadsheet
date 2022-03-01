@@ -1,5 +1,4 @@
 /* global document */
-
 import Selector from './selector';
 import Scroll from './scroll';
 import History from './history';
@@ -13,6 +12,7 @@ import { Validations } from './validation';
 import { CellRange } from './cell_range';
 import { expr2xy, xy2expr } from './alphabet';
 import { t } from '../locale/locale';
+import { xtos } from '../utool/sheetjs';
 
 // private methods
 /*
@@ -80,6 +80,7 @@ const defaultSettings = {
   showBottomBar: true,
   row: {
     len: 100,
+    dataLen: 0,
     height: 25,
   },
   col: {
@@ -406,34 +407,51 @@ export default class DataProxy {
 
   copyToSystemClipboard(evt) {
     let copyText = [];
+    let copyHtml = {};
     const {
       sri, eri, sci, eci,
     } = this.selector.range;
+    const rows = { len: 0 };
 
     for (let ri = sri; ri <= eri; ri += 1) {
-      const row = [];
+      const rowText = [];
+      rows[ri-sri] = {cells: {}};
       for (let ci = sci; ci <= eci; ci += 1) {
         const cell = this.getCell(ri, ci);
-        row.push((cell && cell.text) || '');
+        rows[ri-sri].cells[ci] = {text: (cell && cell.text) || ''};
+        rowText.push((cell && cell.text) || '');
       }
-      copyText.push(row);
+      copyText.push(rowText);
+      rows.len++;
     }
 
     // Adding \n and why not adding \r\n is to support online office and client MS office and WPS
     copyText = copyText.map(row => row.join('\t')).join('\n');
+    copyHtml = xtos([{
+      name: 'Sheet1',
+      rows: rows,
+      merges: []
+    }]);
 
     // why used this
     // cuz http protocol will be blocked request clipboard by browser
     if (evt) {
       evt.clipboardData.clearData();
       evt.clipboardData.setData('text/plain', copyText);
+      evt.clipboardData.setData('text/html', copyHtml);
       evt.preventDefault();
     }
 
     // this need https protocol
     /* global navigator */
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(copyText).then(() => {}, (err) => {
+      const text = new Blob([copyText], {type: 'text/plain'});
+      const html = new Blob([copyHtml], {type: 'text/html'});
+      const item = new ClipboardItem({
+        'text/plain': text,
+        'text/html': html
+      });
+      navigator.clipboard.write([item]).then(() => {}, (err) => {
         console.log('text copy to the system clipboard error  ', copyText, err);
       });
     }

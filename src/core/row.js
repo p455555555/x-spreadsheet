@@ -5,6 +5,7 @@ class Rows {
   constructor({ len, height }) {
     this._ = {};
     this.len = len;
+    this.dataLen = 0;
     // default row height
     this.height = height;
   }
@@ -341,12 +342,16 @@ class Rows {
       this.len = d.len;
       delete d.len;
     }
+    if (d.dataLen) {
+      this.dataLen = d.dataLen;
+      delete d.dataLen;
+    }
     this._ = d;
   }
 
   getData() {
-    const { len } = this;
-    return Object.assign({ len }, this._);
+    const { len, dataLen } = this;
+    return Object.assign({ len, dataLen }, this._);
   }
 }
 

@@ -19,6 +19,7 @@ import SortFilter from './sort_filter';
 import { xtoast } from './message';
 import { cssPrefix } from '../config';
 import { formulas } from '../core/formula';
+import { stox } from '../utool/sheetjs';
 
 /**
  * @desc throttle fn
@@ -80,6 +81,7 @@ function selectorSet(multiple, ri, ci, indexesUpdated = true, moving = false) {
   } else {
     // trigger click event
     selector.set(ri, ci, indexesUpdated);
+    this.selectCell = { ...this.selectCell, cell, ri, ci };
     this.trigger('cell-selected', cell, ri, ci);
   }
   contextMenu.setMode((ri === -1 || ci === -1) ? 'row-col' : 'range');
@@ -329,16 +331,111 @@ function cut() {
   selector.showClipboard();
 }
 
-function paste(what, evt) {
+function paste (what, evt) {
   const { data } = this;
   if (data.settings.mode === 'read') return;
-  if (data.paste(what, msg => xtoast('Tip', msg))) {
-    sheetReset.call(this);
-  } else if (evt) {
-    const cdata = evt.clipboardData.getData('text/plain');
-    this.data.pasteFromText(cdata);
-    sheetReset.call(this);
+
+  getClipboardData(evt).then((res) => {
+    let [cdataHtml, cdataText] = res;
+    if (!(canPaste.call(this) && cdataHtml)) return;
+
+    setPaseData.call(this, cdataHtml, cdataText);
+  })
+  
+  // if (cdataHtml && cdataText) {
+  //   this.trigger('pasted', 2, null, null);
+  // } else if (data.paste(what, msg => xtoast('Tip', msg))) {
+  //   this.trigger('pasted', 1, data.clipboard.range.eri, data.clipboard.range.sri, null);
+  //   sheetReset.call(this);
+  // }
+}
+
+async function getClipboardData (evt) {
+  let cdataHtml = '';
+  let cdataText = '';
+  try {
+    const clipboardItems = await navigator.clipboard.read();
+    for (const clipboardItem of clipboardItems) {
+      for (const type of clipboardItem.types) {
+        if (type === 'text/html') {
+          const blob = await clipboardItem.getType(type);
+          const html = await blob.text();
+
+          try {
+            cdataHtml = stox(html);
+          } catch (error) {
+            throw error;
+          }
+        } else if (type === 'text/plain') {
+          const blob = await clipboardItem.getType(type);
+          cdataText = await blob.text();
+        }
+      }
+    }
+  } catch (err) {
+    cdataHtml = [{
+      "name": "Sheet1",
+      "rows": {
+        "0": {
+          "cells": {
+            "0": {
+              "text": cdataText
+            }
+          }
+        }
+      },
+      "merges": []
+    }];
   }
+
+  return [cdataHtml, cdataText];
+}
+
+function setPaseData(cdataHtml, cdataText) {
+  const { data, selectCell } = this;
+  const isRowPaste = selectCell?.ci === -1;
+  const rows = cdataHtml?.[0]?.rows || [];
+
+  this.trigger('pasted', rows, cdataText);
+
+  if (isRowPaste) {
+    let i = 0;
+    for (const key in rows) {
+      if (Object.hasOwnProperty.call(rows, key)) {
+        const item = rows[key];
+        data.rows._[selectCell.ri + i] = item;
+        i++;
+      }
+    }
+  } else {
+    let x = selectCell.ri;
+    for (const key in rows) {
+      if (Object.hasOwnProperty.call(rows, key)) {
+        const item = rows[key]?.cells;
+        let y = selectCell.ci;
+        let lastKey = Object.keys(item);
+        lastKey = Number(lastKey[lastKey.length-1]) + y;
+        for (let i = y; i <= lastKey; i++) {
+          const itemx = item?.[i-y];
+          data.rows.setCell(x, i, {
+            text: itemx?.text || ''
+          }, 'text');
+        }
+        x++;
+      }
+    }
+  }
+  
+  sheetReset.call(this);
+}
+
+function canPaste() {
+  const { data, selectCell } = this;
+  const prevCellRi = selectCell?.ri-1;
+  const prevCell2 = data.getCell(prevCellRi, 2);
+  const prevCell0 = data.getCell(prevCellRi, 0);
+
+  return !!(prevCellRi > 0 && prevCell2?.text && prevCell0?.tableId);
 }
 
 function hideRowsOrCols() {
@@ -449,18 +546,18 @@ function editorSet() {
 }
 
 function scrollEnd(ri) {
-  const { viewHeight, rowsHeight } = this;
+  const { data, viewHeight, rowsHeight } = this;
   const screenRowsNum = Math.floor(viewHeight / rowsHeight);
   const endRi = screenRowsNum + ri - 3;
+  const rowLen = data.rows.len;
 
-  if (rowLen ===  endRi) {
+  if (rowLen === endRi) {
     this.trigger('scroll-end', endRi);
   }
 }
 
 function verticalScrollbarMove(distance) {
   const { data, table, selector } = this;
-  // this.trigger('mouse-scoll', data?.scroll);
   data.scrolly(distance, (ri) => {
     scrollEnd.call(this, ri);
     selector.resetBRLAreaOffset();
@@ -928,6 +1025,12 @@ export default class Sheet {
     this.table = new Table(this.tableEl.el, data);
     this.viewHeight = data.viewHeight();
     this.rowsHeight = data.rows.getHeight();
+    this.selectCell = {
+      cell: null,
+      ri: 0,
+      ci: 0,
+      ischanged: false
+    }
 
     sheetInitEvents.call(this);
     sheetReset.call(this);
