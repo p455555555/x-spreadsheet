@@ -405,9 +405,7 @@ export default class DataProxy {
     this.clipboard.copy(this.selector.range);
   }
 
-  copyToSystemClipboard(evt) {
-    let copyText = [];
-    let copyHtml = {};
+  getSelectedDate() {
     const {
       sri, eri, sci, eci,
     } = this.selector.range;
@@ -418,13 +416,27 @@ export default class DataProxy {
       rows[ri-sri] = {cells: {}};
       for (let ci = sci; ci <= eci; ci += 1) {
         const cell = this.getCell(ri, ci);
-        rows[ri-sri].cells[ci] = {text: (cell && cell.text) || ''};
+        const data = {text: (cell && cell.text) || ''}
+        if (cell?.id) {
+          data.id = cell.id;
+        }
+        if (cell?.tableId) {
+          data.tableId = cell.tableId;
+        }
+        rows[ri-sri].cells[ci] = data;
         rowText.push((cell && cell.text) || '');
       }
-      copyText.push(rowText);
       rows.len++;
     }
 
+    return rows;
+  }
+
+  copyToSystemClipboard(evt) {
+    let copyText = [];
+    let copyHtml = {};
+    const rows = this.getSelectedDate();
+    
     // Adding \n and why not adding \r\n is to support online office and client MS office and WPS
     copyText = copyText.map(row => row.join('\t')).join('\n');
     copyHtml = xtos([{

@@ -16,7 +16,12 @@ export const stox = (text) => {
     // const wb = XLSX.read(text, {
     //     type: 'string'
     // });
-    const wb = html_to_book(text);
+    let wb = null;
+    try {
+      wb = html_to_book(text);
+    } catch (error) {
+      throw error;
+    }
     
     const out = [];
     
@@ -238,10 +243,11 @@ const html_to_sheet = (str, _opts)=> {
     const cells = row.split(/<\/t[dh]>/i);
     
     for(let j = 0; j < cells.length; ++j) {
-      const cell = cells[j].trim()
+      const cell = cells[j].trim();
       if(!cell.match(/<t[dh]/i)) continue;
       let m = cell, cc = 0;
-      m = m.replace(/<td (.*)>/, '');
+      // Replace <br> tags with new lines frist
+      m = m.replace(/<\s*[bB][rR]\s*\/?>/g,"\n").replace(/<td (.*)>/s, '');
       /* TODO: parse styles etc */
       // while(m.charAt(0) == "<" && (cc = m.indexOf(">")) > -1) m = m.slice(cc+1);
       for(let midx = 0; midx < merges.length; ++midx) {
@@ -258,7 +264,7 @@ const html_to_sheet = (str, _opts)=> {
       if(range.s.r > R) range.s.r = R; if(range.e.r < R) range.e.r = R;
       if(range.s.c > C) range.s.c = C; if(range.e.c < C) range.e.c = C;
       if(!m.length) continue;
-      const o = {t:'s', v:m};
+      let o = {t:'s', v:m};
       if(opts.raw || !m.trim().length || _t == 's'){}
       else if(m === 'TRUE') o = {t:'b', v:true};
       else if(m === 'FALSE') o = {t:'b', v:false};
@@ -278,7 +284,7 @@ const html_to_sheet = (str, _opts)=> {
   return ws;
 }
 
-const htmldecode = (function() {
+export const htmldecode = (function() {
 	const entities = [
 		['nbsp', ' '], ['middot', '·'],
 		['quot', '"'], ['apos', "'"], ['gt',   '>'], ['lt',   '<'], ['amp',  '&']
@@ -286,15 +292,15 @@ const htmldecode = (function() {
 	return function htmldecode(str) {
 		let o = str
 				// Remove new lines and spaces from start of content
-				.replace(/^[\t\n\r ]+/, "")
+				.replace(/^[\t\r ]+/, "")
 				// Remove new lines and spaces from end of content
-				.replace(/[\t\n\r ]+$/,"")
+				.replace(/[\t\r ]+$/, "")
 				// Added line which removes any white space characters after and before html tags
 				.replace(/>\s+/g,">").replace(/\s+</g,"<")
 				// Replace remaining new lines and spaces with space
-				.replace(/[\t\n\r ]+/g, " ")
+				.replace(/[\t\r ]+/g, " ")
 				// Replace <br> tags with new lines
-				.replace(/<\s*[bB][rR]\s*\/?>/g,"\n")
+				// .replace(/<\s*[bB][rR]\s*\/?>/g,"\n")
 				// Strip HTML elements
 				.replace(/<[^>]*>/g,"");
 		for(let i = 0; i < entities.length; ++i) o = o.replace(entities[i][0], entities[i][1]);
@@ -423,6 +429,7 @@ const make_html_row = (ws, r, R, o) => {
         const cell = o.dense ? (ws[R]||[])[C] : ws[coord];
         /* TODO: html entities */
         const w = (cell && cell.v != null) && (cell.h || escapehtml(cell.v || (format_cell(cell), cell.v) || "")) || "";
+
         const sp = ({});
         if(RS > 1) sp.rowspan = RS;
         if(CS > 1) sp.colspan = CS;
@@ -461,6 +468,27 @@ const sheet_to_html = (ws, opts/*, wb:?Workbook*/) => {
     out.push("</table>" + footer);
     return out.join("");
 }
+const encodings = {
+	'&quot;': '"',
+	'&apos;': "'",
+	'&gt;': '>',
+	'&lt;': '<',
+	'&amp;': '&'
+};
+
+const keys = (o) => {
+	const ks = Object.keys(o), o2 = [];
+	for(let i = 0; i < ks.length; ++i) if(Object.prototype.hasOwnProperty.call(o, ks[i])) o2.push(ks[i]);
+	return o2;
+}
+
+const evert = (obj) => {
+	const o = ([]), K = keys(obj);
+	for(let i = 0; i !== K.length; ++i) o[obj[K[i]]] = K[i];
+	return o;
+}
+
+const rencoding = evert(encodings);
 
 const decregex=/[&<>'"]/g, charegex = /[\u0000-\u0008\u000b-\u001f]/g;
 const htmlcharegex = /[\u0000-\u001f]/g;
@@ -482,12 +510,6 @@ const safe_format_cell = (cell, v) => {
 	const q = (cell.t == 'd' && v instanceof Date);
 	if(cell.z != null) try { return (cell.w = SSF.format(cell.z, q ? datenum(v) : v)); } catch(e) { }
 	try { return (cell.w = SSF.format((cell.XF||{}).numFmtId||(q ? 14 : 0),  q ? datenum(v) : v)); } catch(e) { return ''+v; }
-}
-
-const keys = (o) => {
-	const ks = Object.keys(o), o2 = [];
-	for(let i = 0; i < ks.length; ++i) if(Object.prototype.hasOwnProperty.call(o, ks[i])) o2.push(ks[i]);
-	return o2;
 }
 
 const wtregex = /(^\s|\s$|\n)/;

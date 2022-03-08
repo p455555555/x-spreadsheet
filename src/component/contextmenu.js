@@ -5,26 +5,26 @@ import { tf } from '../locale/locale';
 
 const menuItems = [
   { key: 'copy', title: tf('contextmenu.copy'), label: 'Ctrl+C' },
-  { key: 'cut', title: tf('contextmenu.cut'), label: 'Ctrl+X' },
+  // { key: 'cut', title: tf('contextmenu.cut'), label: 'Ctrl+X' },
   { key: 'paste', title: tf('contextmenu.paste'), label: 'Ctrl+V' },
-  { key: 'paste-value', title: tf('contextmenu.pasteValue'), label: 'Ctrl+Shift+V' },
-  { key: 'paste-format', title: tf('contextmenu.pasteFormat'), label: 'Ctrl+Alt+V' },
-  { key: 'divider' },
+  // { key: 'paste-value', title: tf('contextmenu.pasteValue'), label: 'Ctrl+Shift+V' },
+  // { key: 'paste-format', title: tf('contextmenu.pasteFormat'), label: 'Ctrl+Alt+V' },
+  // { key: 'divider' },
   { key: 'insert-row', title: tf('contextmenu.insertRow') },
-  { key: 'insert-column', title: tf('contextmenu.insertColumn') },
-  { key: 'divider' },
+  // { key: 'insert-column', title: tf('contextmenu.insertColumn') },
+  // { key: 'divider' },
   { key: 'delete-row', title: tf('contextmenu.deleteRow') },
-  { key: 'delete-column', title: tf('contextmenu.deleteColumn') },
+  // { key: 'delete-column', title: tf('contextmenu.deleteColumn') },
   { key: 'delete-cell-text', title: tf('contextmenu.deleteCellText') },
-  { key: 'hide', title: tf('contextmenu.hide') },
-  { key: 'divider' },
-  { key: 'validation', title: tf('contextmenu.validation') },
-  { key: 'divider' },
-  { key: 'cell-printable', title: tf('contextmenu.cellprintable') },
-  { key: 'cell-non-printable', title: tf('contextmenu.cellnonprintable') },
-  { key: 'divider' },
-  { key: 'cell-editable', title: tf('contextmenu.celleditable') },
-  { key: 'cell-non-editable', title: tf('contextmenu.cellnoneditable') },
+  // { key: 'hide', title: tf('contextmenu.hide') },
+  // { key: 'divider' },
+  // { key: 'validation', title: tf('contextmenu.validation') },
+  // { key: 'divider' },
+  // { key: 'cell-printable', title: tf('contextmenu.cellprintable') },
+  // { key: 'cell-non-printable', title: tf('contextmenu.cellnonprintable') },
+  // { key: 'divider' },
+  // { key: 'cell-editable', title: tf('contextmenu.celleditable') },
+  // { key: 'cell-non-editable', title: tf('contextmenu.cellnoneditable') },
 ];
 
 function buildMenuItem(item) {
@@ -61,11 +61,11 @@ export default class ContextMenu {
   // row-col: the whole rows or the whole cols
   // range: select range
   setMode(mode) {
-    const hideEl = this.menuItems[12];
+    const hideEl = this.menuItems[5];
     if (mode === 'row-col') {
-      hideEl.show();
+      hideEl?.show();
     } else {
-      hideEl.hide();
+      hideEl?.hide();
     }
   }
 

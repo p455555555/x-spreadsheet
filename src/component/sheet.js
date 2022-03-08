@@ -360,7 +360,7 @@ async function getClipboardData (evt) {
         if (type === 'text/html') {
           const blob = await clipboardItem.getType(type);
           const html = await blob.text();
-
+          
           try {
             cdataHtml = stox(html);
           } catch (error) {
@@ -434,6 +434,10 @@ function canPaste() {
   const prevCellRi = selectCell?.ri-1;
   const prevCell2 = data.getCell(prevCellRi, 2);
   const prevCell0 = data.getCell(prevCellRi, 0);
+
+  if (selectCell?.ri === 1) {
+    return true;
+  }
 
   return !!(prevCellRi > 0 && prevCell2?.text && prevCell0?.tableId);
 }
@@ -609,12 +613,25 @@ function dataSetCellText(text, state = 'finished') {
   }
 }
 
+function getDeleteRowId (type) {
+  const { data } = this;
+  const rows = data.getSelectedDate();
+  const row1 = data.rows._[0]?.cells;
+  let delType = 'cell';
+  if (Object.keys(rows[0]?.cells)?.length === Object.keys(row1)?.length) {
+    delType = 'row';
+  }
+
+  this.trigger('deleted', delType, rows);
+}
+
 function insertDeleteRowColumn(type) {
   const { data } = this;
   if (data.settings.mode === 'read') return;
   if (type === 'insert-row') {
     data.insert('row');
   } else if (type === 'delete-row') {
+    getDeleteRowId.call(this, 'row');
     data.delete('row');
   } else if (type === 'insert-column') {
     data.insert('column');
@@ -625,6 +642,7 @@ function insertDeleteRowColumn(type) {
   } else if (type === 'delete-cell-format') {
     data.deleteCell('format');
   } else if (type === 'delete-cell-text') {
+    getDeleteRowId.call(this, 'cell');
     data.deleteCell('text');
   } else if (type === 'cell-printable') {
     data.setSelectedCellAttr('printable', true);
