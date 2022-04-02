@@ -413,19 +413,20 @@ export default class DataProxy {
 
     for (let ri = sri; ri <= eri; ri += 1) {
       const rowText = [];
-      rows[ri-sri] = {cells: {}};
+      rows[ri - sri] = { cells: {} };
       for (let ci = sci; ci <= eci; ci += 1) {
         const cell = this.getCell(ri, ci);
-        const data = {text: (cell && cell.text) || ''}
-        if (cell?.id) {
+        const data = { text: (cell && cell.text) || '' };
+        if (cell && cell.id) {
           data.id = cell.id;
         }
-        if (cell?.tableId) {
+        if (cell && cell.tableId) {
           data.tableId = cell.tableId;
         }
-        rows[ri-sri].cells[ci] = data;
+        rows[ri - sri].cells[ci] = data;
         rowText.push((cell && cell.text) || '');
       }
+      // eslint-disable-next-line no-plusplus
       rows.len++;
     }
 
@@ -436,13 +437,13 @@ export default class DataProxy {
     let copyText = [];
     let copyHtml = {};
     const rows = this.getSelectedDate();
-    
+
     // Adding \n and why not adding \r\n is to support online office and client MS office and WPS
     copyText = copyText.map(row => row.join('\t')).join('\n');
     copyHtml = xtos([{
       name: 'Sheet1',
-      rows: rows,
-      merges: []
+      rows,
+      merges: [],
     }]);
 
     // why used this
@@ -457,11 +458,14 @@ export default class DataProxy {
     // this need https protocol
     /* global navigator */
     if (navigator.clipboard) {
-      const text = new Blob([copyText], {type: 'text/plain'});
-      const html = new Blob([copyHtml], {type: 'text/html'});
+      // eslint-disable-next-line no-undef
+      const text = new Blob([copyText], { type: 'text/plain' });
+      // eslint-disable-next-line no-undef
+      const html = new Blob([copyHtml], { type: 'text/html' });
+      // eslint-disable-next-line no-undef
       const item = new ClipboardItem({
         'text/plain': text,
-        'text/html': html
+        'text/html': html,
       });
       navigator.clipboard.write([item]).then(() => {}, (err) => {
         console.log('text copy to the system clipboard error  ', copyText, err);

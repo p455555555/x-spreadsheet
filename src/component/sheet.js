@@ -350,7 +350,7 @@ function paste (what, evt) {
   // }
 }
 
-async function getClipboardData (evt) {
+async function getClipboardData(evt) {
   let cdataHtml = '';
   let cdataText = '';
   try {
@@ -374,17 +374,17 @@ async function getClipboardData (evt) {
     }
   } catch (err) {
     cdataHtml = [{
-      "name": "Sheet1",
-      "rows": {
-        "0": {
-          "cells": {
-            "0": {
-              "text": cdataText
+      name: "Sheet1",
+      rows: {
+      0: {
+          cells: {
+          0: {
+              text: cdataText
             }
           }
         }
       },
-      "merges": []
+      merges: [],
     }];
   }
 
@@ -393,7 +393,7 @@ async function getClipboardData (evt) {
 
 function setPaseData(cdataHtml, cdataText) {
   const { data, selectCell } = this;
-  const isRowPaste = selectCell?.ci === -1;
+  const isRowPaste = selectCell && selectCell.ci === -1;
   const rows = cdataHtml?.[0]?.rows || [];
 
   this.trigger('pasted', rows, cdataText);

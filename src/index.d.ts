@@ -1,4 +1,4 @@
-declare module 'x-data-spreadsheet' {
+declare module 'x-data-spreadsheet-lang' {
   export interface ExtendToolbarOption {
     tip?: string;
     el?: HTMLElement;
