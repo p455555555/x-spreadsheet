@@ -7,6 +7,7 @@ export default class History {
   }
 
   add(data) {
+    console.log('History add>>>>>', data);
     this.undoItems.push(JSON.stringify(data));
     this.redoItems = [];
   }
@@ -19,19 +20,39 @@ export default class History {
     return this.redoItems.length > 0;
   }
 
-  undo(currentd, cb) {
+  undo(rows) {
     const { undoItems, redoItems } = this;
     if (this.canUndo()) {
-      redoItems.push(JSON.stringify(currentd));
-      cb(JSON.parse(undoItems.pop()));
+      const popData = JSON.parse(undoItems.pop());
+      const nowData = this.getRowNowData(rows, popData);
+      redoItems.push(nowData);
+      console.log('redoItems>>>>>>>', redoItems);
+      console.log('undoItems>>>>>>>', undoItems);
+      return popData;
     }
+    return false;
   }
 
-  redo(currentd, cb) {
+  redo(rows) {
     const { undoItems, redoItems } = this;
     if (this.canRedo()) {
-      undoItems.push(JSON.stringify(currentd));
-      cb(JSON.parse(redoItems.pop()));
+      const popData = JSON.parse(redoItems.pop());
+      undoItems.push(this.getRowNowData(rows, popData));
+      console.log('redoItems>>>>>>>', redoItems);
+      console.log('undoItems>>>>>>>', undoItems);
+      return popData;
     }
+    return false;
+  }
+
+  getRowNowData(rows, data) {
+    const nowData = {};
+    for (const key in data) {
+      if (Object.hasOwnProperty.call(data, key)) {
+        nowData[key] = rows._[key] || null;
+      }
+    }
+
+    return JSON.stringify(nowData);
   }
 }

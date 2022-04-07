@@ -338,16 +338,11 @@ function paste (what, evt) {
   getClipboardData(evt).then((res) => {
     let [cdataHtml, cdataText] = res;
     if (!(canPaste.call(this) && cdataHtml)) return;
+    const rows = cdataHtml?.[0]?.rows || {};
+    this.trigger('pasted', rows, cdataText);
 
-    setPaseData.call(this, cdataHtml, cdataText);
-  })
-  
-  // if (cdataHtml && cdataText) {
-  //   this.trigger('pasted', 2, null, null);
-  // } else if (data.paste(what, msg => xtoast('Tip', msg))) {
-  //   this.trigger('pasted', 1, data.clipboard.range.eri, data.clipboard.range.sri, null);
-  //   sheetReset.call(this);
-  // }
+    // setPaseData.call(this, cdataHtml, cdataText);
+  });
 }
 
 async function getClipboardData(evt) {
@@ -389,44 +384,6 @@ async function getClipboardData(evt) {
   }
 
   return [cdataHtml, cdataText];
-}
-
-function setPaseData(cdataHtml, cdataText) {
-  const { data, selectCell } = this;
-  const isRowPaste = selectCell && selectCell.ci === -1;
-  const rows = cdataHtml?.[0]?.rows || [];
-
-  this.trigger('pasted', rows, cdataText);
-
-  if (isRowPaste) {
-    let i = 0;
-    for (const key in rows) {
-      if (Object.hasOwnProperty.call(rows, key)) {
-        const item = rows[key];
-        data.rows._[selectCell.ri + i] = item;
-        i++;
-      }
-    }
-  } else {
-    let x = selectCell.ri;
-    for (const key in rows) {
-      if (Object.hasOwnProperty.call(rows, key)) {
-        const item = rows[key]?.cells;
-        let y = selectCell.ci;
-        let lastKey = Object.keys(item);
-        lastKey = Number(lastKey[lastKey.length-1]) + y;
-        for (let i = y; i <= lastKey; i++) {
-          const itemx = item?.[i-y];
-          data.rows.setCell(x, i, {
-            text: itemx?.text || ''
-          }, 'text');
-        }
-        x++;
-      }
-    }
-  }
-  
-  sheetReset.call(this);
 }
 
 function canPaste() {
@@ -617,8 +574,9 @@ function getDeleteRowId (type) {
   const { data } = this;
   const rows = data.getSelectedDate();
   const row1 = data.rows._[0]?.cells;
-  let delType = 'cell';
-  if (Object.keys(rows[0]?.cells)?.length === Object.keys(row1)?.length) {
+  let delType = type;
+  const firstKey = Object.keys(rows)[0];
+  if (Object.keys(rows[firstKey]?.cells)?.length === Object.keys(row1)?.length) {
     delType = 'row';
   }
 
@@ -1094,12 +1052,14 @@ export default class Sheet {
   }
 
   undo() {
-    this.data.undo();
+    const d = this.data.undo();
+    this.trigger('onUndo', d);
     sheetReset.call(this);
   }
 
   redo() {
-    this.data.redo();
+    const d = this.data.redo();
+    this.trigger('onRedo', d);
     sheetReset.call(this);
   }
 
@@ -1122,5 +1082,63 @@ export default class Sheet {
       left: cols.indexWidth,
       top: rows.height,
     };
+  }
+
+  setDeleteData(rows) {
+    for (const key in rows) {
+      if (Object.hasOwnProperty.call(rows, key)) {
+          Reflect.deleteProperty(this.data.rows._, key);
+      }
+    }
+
+    sheetReset.call(this);
+  }
+
+  setPaseData(rows, from = null) {
+    const { data, selectCell } = this;
+    // const isRowPaste = selectCell && selectCell.ci === -1;
+    const historyData = {};
+
+    let x = 0;
+    for (const key in rows) {
+      if (Object.hasOwnProperty.call(rows, key)) {
+        const index = from === 'changeData'? key: selectCell.ri + x;
+        historyData[index] = this.data.rows._?.[index] || null;
+        x++;
+      }
+    }
+
+    if (from !== 'changeData') {data.paste(historyData);}
+  
+    // if (isRowPaste) {
+      let i = 0;
+      for (const key in rows) {
+        if (Object.hasOwnProperty.call(rows, key)) {
+          const item = rows[key];
+          const index = from === 'changeData'? key: selectCell.ri + i;
+          data.rows._[index] = item;
+          historyData[index] = item;
+          i++;
+        }
+      }
+    // } else {
+    //   let x = selectCell.ri;
+    //   for (const key in rows) {
+    //     if (Object.hasOwnProperty.call(rows, key)) {
+    //       const item = rows[key]?.cells;
+    //       let y = selectCell.ci;
+    //       let lastKey = Object.keys(item);
+    //       historyData[x] = rows[key];
+    //       lastKey = Number(lastKey[lastKey.length-1]) + y;
+    //       for (let i = y; i <= lastKey; i++) {
+    //         const itemx = item?.[i-y];
+    //         data.rows.setCell(x, i, itemx, 'all');
+    //       }
+    //       x++;
+    //     }
+    //   }
+    // }
+    
+    sheetReset.call(this);
   }
 }

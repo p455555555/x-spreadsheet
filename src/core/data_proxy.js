@@ -390,30 +390,38 @@ export default class DataProxy {
   }
 
   undo() {
-    this.history.undo(this.getData(), (d) => {
-      this.setData(d);
-    });
+    return this.history.undo(this.rows);
   }
 
   redo() {
-    this.history.redo(this.getData(), (d) => {
-      this.setData(d);
-    });
+    return this.history.redo(this.rows);
   }
 
   copy() {
     this.clipboard.copy(this.selector.range);
   }
 
+  getSelectedRows() {
+    const {
+      sri, eri
+    } = this.selector.range;
+    const rows = {};
+    for (let ri = sri; ri <= eri; ri += 1) {
+      rows[ri] = this.rows._[ri];
+    }
+
+    return rows;
+  }
+
   getSelectedDate() {
     const {
       sri, eri, sci, eci,
     } = this.selector.range;
-    const rows = { len: 0 };
+    const rows = {};
 
     for (let ri = sri; ri <= eri; ri += 1) {
       const rowText = [];
-      rows[ri - sri] = { cells: {} };
+      rows[ri] = { cells: {} };
       for (let ci = sci; ci <= eci; ci += 1) {
         const cell = this.getCell(ri, ci);
         const data = { text: (cell && cell.text) || '' };
@@ -423,11 +431,9 @@ export default class DataProxy {
         if (cell && cell.tableId) {
           data.tableId = cell.tableId;
         }
-        rows[ri - sri].cells[ci] = data;
+        rows[ri].cells[ci] = data;
         rowText.push((cell && cell.text) || '');
       }
-      // eslint-disable-next-line no-plusplus
-      rows.len++;
     }
 
     return rows;
@@ -478,19 +484,19 @@ export default class DataProxy {
   }
 
   // what: all | text | format
-  paste(what = 'all', error = () => {}) {
+  paste(data) {
     // console.log('sIndexes:', sIndexes);
     const { clipboard, selector } = this;
-    if (clipboard.isClear()) return false;
-    if (!canPaste.call(this, clipboard.range, selector.range, error)) return false;
-
+    // if (clipboard.isClear()) return false;
+    // if (!canPaste.call(this, clipboard.range, selector.range, '')) return false;
+    this.changeHistoryData(data);
     this.changeData(() => {
       if (clipboard.isCopy()) {
-        copyPaste.call(this, clipboard.range, selector.range, what);
+        // copyPaste.call(this, clipboard.range, selector.range, what);
       } else if (clipboard.isCut()) {
-        cutPaste.call(this, clipboard.range, selector.range);
+        // cutPaste.call(this, clipboard.range, selector.range);
       }
-    });
+    }, data);
     return true;
   }
 
@@ -853,6 +859,8 @@ export default class DataProxy {
 
   deleteCell(what = 'all') {
     const { selector } = this;
+    const historyData = this.getSelectedRows();
+    this.changeHistoryData(historyData);
     this.changeData(() => {
       this.rows.deleteCells(selector.range, what);
       if (what === 'all' || what === 'format') {
@@ -884,6 +892,8 @@ export default class DataProxy {
 
   // type: row | column
   delete(type) {
+    const historyData = this.getSelectedRows();
+    this.changeHistoryData(historyData);
     this.changeData(() => {
       const {
         rows, merges, selector, cols,
@@ -1011,11 +1021,11 @@ export default class DataProxy {
     const { rows, history, validations } = this;
     if (state === 'finished') {
       rows.setCellText(ri, ci, '');
-      history.add(this.getData());
+      history.add({[ri] : this.rows?._[ri]});
       rows.setCellText(ri, ci, text);
     } else {
       rows.setCellText(ri, ci, text);
-      this.change(this.getData());
+      this.change({[ri] : this.rows?._[ri]});
     }
     // validator
     validations.validate(ri, ci, text);
@@ -1203,10 +1213,14 @@ export default class DataProxy {
     return styles.length - 1;
   }
 
-  changeData(cb) {
-    this.history.add(this.getData());
+  changeData(cb, row) {
+    // if (row) {this.history.add(row);}
     cb();
-    this.change(this.getData());
+    // if (row) {this.change(row);}
+  }
+
+  changeHistoryData(row) {
+    this.history.add(row);
   }
 
   setData(d) {
